@@ -1,17 +1,27 @@
+## code to perform the segmented block bootstrap analysis for the LASSi regions of selection ##
+## we mostly followed the analyses described in the official vignette here https://bioconductor.org/packages/release/bioc/vignettes/nullranges/inst/doc/bootRanges.html#Segmented_block_bootstrap
+## the only modification we made was to remove very large selection regions to preserve the isochore structure ##
+
+
+
 libs = c("AnnotationHub", "ensembldb", "EnsDb.Hsapiens.v86", "nullranges", "GenomeInfoDb", "DNAcopy", "nullrangesData", "plyranges", "tidyr", "ggridges", "purrr", "ggplot2", "BSgenome.Hsapiens.UCSC.hg38", "GenomicRanges", "gridExtra")
 suppressPackageStartupMessages(invisible(sapply(libs, library, character.only = TRUE)))
 
 ## read in different vip_sets ##
 
+## maximum length of LASSi selection region to keep 
 length_keep = 5e5
 
+## population we are analysing
 pop = "CKB"
 
 regions = list.files(pattern=".regions", path="/home/sam/work/COVID_selection/data/VIPs", full.names=T)
 
+## read in VIP list
 vip_list = lapply(regions, fread)
 names(vip_list) = str_remove_all(basename(regions), "\\.regions")
 
+## turn vips into GRanges object
 vip_list = lapply(vip_list, function(x) {
   colnames(x) = c("chr", "start", "end", "gene")
   x[, chr := paste0("chr", chr)]
@@ -21,20 +31,17 @@ vip_list = lapply(vip_list, function(x) {
 
   x = x %>%
       mutate(id = seq_along(.)) 
-
   })
 
 ### read in LASSI etc ###
-
 lassi_file = paste0("/home/sam/work/COVID_selection/data/LASSI/",pop,"_Lassi_peaks.txt") 
-
 lassi = fread(lassi_file) %>%
   dplyr::rename(chr = 1, start = 2, end = 3) %>%
   mutate(chr = paste0("chr", chr))
 
+## turn lassi into GRanges and then remove any regions which are too long
 colnames(lassi) = c("chr", "start", "end")
 lassi = makeGRangesFromDataFrame(lassi, seqnames.field = "chr")
-
 lassi_remove = lassi %>% plyranges::filter(width(lassi) >= length_keep)
 
 ## remove any segments which are too long ##
@@ -56,7 +63,7 @@ exclude_2 = ah[["AH107354"]]
 exclude_3 = ah[["AH107355"]]
 # hg38.UCSC.short_arm
 exclude_4 = ah[["AH107356"]]
-# HLA
+# HLA removal 
 HLA = GRanges("chr6", IRanges(20 * 1e6, width=20e6), x_id=1)
 # combine them
 suppressWarnings({
@@ -82,7 +89,6 @@ seqlevels(g, pruning.mode="coarse") = setdiff(seqlevels(g), c("MT", "X", "Y"))
 ## seqlevelsStyle(g) = "UCSC" 
 seqlevels(g) = paste0("chr", seqlevels(g))
 
-# g = g %>% filter(seqnames %in% paste0("chr", 1:22))
 genome(g) = "hg38"
 g = sortSeqlevels(g)
 g = sort(g)
@@ -147,6 +153,7 @@ vip_list = lapply(vip_list, function(x) {
   })
 
 
+## plot the bootstrap results 
 boot_stats_plot_list = lapply(names(vip_list), function(x) {
 
   boot_stats = vip_list[[x]] %>% 
@@ -178,6 +185,7 @@ do.call("grid.arrange", c(boot_stats_plot_list, ncol=nCol))
 dev.off()
 
 
+##  use bootstraps to calculate empirical p-vals and confidence invervals
 dt_res = data.table(do.call(rbind.data.frame, lapply(names(vip_list), function(x) {
 
   boot_stats = vip_list[[x]] %>% 

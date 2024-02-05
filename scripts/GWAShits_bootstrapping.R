@@ -1,17 +1,22 @@
+### code to perform bootstrapping analysis to infer enrichment of selection regions at GWAS hits for COVID-19
+
 libs = c("AnnotationHub", "ensembldb", "EnsDb.Hsapiens.v86", "nullranges", "GenomeInfoDb", "DNAcopy", "nullrangesData", "plyranges", "tidyr", "ggridges", "purrr", "ggplot2", "BSgenome.Hsapiens.UCSC.hg38", "GenomicRanges", "gridExtra")
 suppressPackageStartupMessages(invisible(sapply(libs, library, character.only = TRUE)))
 
 ## read in different vip_sets ##
 length_keep = 5e8
 pop = "CKB"
-gwas_significant = 5 * 10^-8
+gwas_significant = 5e-8
 
-## filter GWAS hits ##
+## filter GWAS hits to keep only unique, GWAS significant, autosomes and ##
 gwas_hits = fread("/home/sam/work/COVID_selection/data/GWAS_stuff/hits_extended.txt") %>% 
   janitor::clean_names() %>%
   filter(chromosome_b38 %in% 1:22) %>%
   filter(pval <= gwas_significant) %>%
   filter(!duplicated(rsid))
+
+
+## convert the data to the correct genomic build. 
 
 lifted_coords = fread("/home/sam/work/COVID_selection/data/GWAS_stuff/hits_b38_chr_pos_liftedb37.txt") %>% 
   mutate(b38_pos = str_split(V4, "-", simplify=T)[,2])

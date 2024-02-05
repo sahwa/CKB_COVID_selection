@@ -38,6 +38,8 @@ get_peaks = function(dat, threshold, min_snp_distance) {
   list(dat_groups, dat_groups[, list(start = min(start), end = max(end)), group])
 }
 
+### function to get overlap between lassi inferred regions of selection and VIPs, considering at least 50% overlap ###
+### and adding some kind of extension around the end of each gene (wiggle room)
 get_overlap_50_pc = function(selected_regions, vip_regions, wiggle_room) {
   vip_regions$start = vip_regions$start - wiggle_room
   vip_regions$end = vip_regions$end + wiggle_room
@@ -69,6 +71,9 @@ get_overlap_50_pc = function(selected_regions, vip_regions, wiggle_room) {
   rbindlist(overlap_res_list[overlap_res_list_50_perc])
 }
 
+
+## function to get detect overlap between lassi inferred regions of selection and VIPs, considering any kind of overlap ##
+## again adding some kind if extension
 get_overlap = function(selected_regions, vip_regions, wiggle_room) {
   vip_regions$start = vip_regions$start - wiggle_room
   vip_regions$end = vip_regions$end + wiggle_room
